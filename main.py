@@ -8,7 +8,7 @@ import re
 
 app = Flask(__name__)
 
-llm = Ollama(model="llama3", stop=["<|eot_id|>"]) 
+llm = Ollama(model="llama3", stop=["<|eot_id|>"], base_url="http://192.168.1.164:11434") 
 
 def format_llm_prompt(user_message, examples):
     formatted_prompt = base_prompt.format(
