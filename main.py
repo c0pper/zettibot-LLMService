@@ -4,7 +4,13 @@ from langchain_community.llms import Ollama
 from prompts import base_prompt, prompts
 from rag import chroma_db
 import re
+import logging
 
+
+logging.basicConfig(
+    format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -26,23 +32,34 @@ def remove_parenthesis(text):
 
 
 def clean_llm_answer(answer):
-    return remove_parenthesis(answer).replace("\"", "").replace("### RISPOSTA:", "")
+    answer = remove_parenthesis(answer).replace("\"", "").replace("### RISPOSTA:", "").capitalize()
+    answer = re.sub(r'[\,\!\.]', ' ', answer)
+    answer = re.sub(r'[\']', '', answer)
+    return remove_parenthesis(answer).replace("\"", "").replace("### RISPOSTA:", "").capitalize()
 
 
 
 @app.route('/generate_message', methods=['POST'])
 def generate_message():
+    print("got request")
     data = request.json
     user_message = data.get('user_message')
     intent = data.get('intent')
 
+    nl = "\n"
     examples = chroma_db.similarity_search(user_message, filter={"intent": intent}, k=2)
     examples = [f"{x.metadata['nap']} ({x.page_content})" for x in examples]
     formatted_prompt = format_llm_prompt(user_message=user_message, examples=examples)
 
+    logger.info(f"User message: {user_message}")
+    logger.info(f"Intent: {intent}")
+    logger.info(f"Examples: \n{nl.join(examples)}")
+    logger.info(f"Formatted prompt: \n{formatted_prompt}")
+
     try:
         llm_response = llm.invoke(formatted_prompt)
         llm_response = clean_llm_answer(llm_response)
+        logger.info(f"LLM Response: {llm_response}")
         return jsonify({'llm_response': llm_response})
     except langchain_community.llms.ollama.OllamaEndpointNotFoundError as e:
         print(f"Ollama error: {e}")
@@ -51,5 +68,5 @@ def generate_message():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000)
     
