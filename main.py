@@ -60,7 +60,10 @@ def generate_message():
         llm_response = llm.invoke(formatted_prompt)
         llm_response = clean_llm_answer(llm_response)
         logger.info(f"LLM Response: {llm_response}")
-        return jsonify({'llm_response': llm_response})
+        return jsonify({
+                'llm_response': llm_response,
+                'examples': nl.join(examples)
+            })
     except langchain_community.llms.ollama.OllamaEndpointNotFoundError as e:
         print(f"Ollama error: {e}")
         return jsonify({'llm_response': ""})
